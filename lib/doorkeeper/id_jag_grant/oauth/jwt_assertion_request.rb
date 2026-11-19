@@ -21,6 +21,13 @@ module Doorkeeper
 
         REQUIRED_CLAIMS = %w[iss sub aud client_id jti exp iat].freeze
 
+        # Draft §4.4.4: the Resource AS SHOULD NOT issue a refresh_token when an
+        # ID-JAG is exchanged for an access token; clients re-present the ID-JAG
+        # instead. +find_or_create_access_token+ merges these attributes last,
+        # so this overrides Doorkeeper's +use_refresh_token+ setting (boolean or
+        # per-grant lambda) for this grant only.
+        NO_REFRESH_TOKEN = { use_refresh_token: false }.freeze
+
         validate :params, error: Doorkeeper::Errors::InvalidRequest
         validate :client, error: Doorkeeper::Errors::InvalidClient
         validate :client_supports_grant_flow, error: Doorkeeper::Errors::UnauthorizedClient
@@ -47,26 +54,8 @@ module Doorkeeper
         private
 
         def before_successful_response
-          create_access_token
+          find_or_create_access_token(client, resource_owner, scopes, NO_REFRESH_TOKEN, server)
           super
-        end
-
-        # Per draft §4.4.4 the Resource AS SHOULD NOT issue a refresh_token when
-        # an ID-JAG is exchanged for an access token, so this bypasses
-        # +find_or_create_access_token+ (whose +use_refresh_token+ follows the
-        # host app's global refresh-token config) and forces it off.
-        def create_access_token
-          context = Doorkeeper::OAuth::Authorization::Token.build_context(
-            client, grant_type, scopes, resource_owner,
-          )
-
-          @access_token = Doorkeeper.config.access_token_model.find_or_create_for(
-            application: client&.application,
-            resource_owner: resource_owner,
-            scopes: scopes,
-            expires_in: Doorkeeper::OAuth::Authorization::Token.access_token_expires_in(server, context),
-            use_refresh_token: false,
-          )
         end
 
         def id_jag_config
@@ -215,7 +204,10 @@ module Doorkeeper
 
         # ID-JAG §4.4 / §9.1: the Resource AS SHOULD require client
         # authentication, so public clients are rejected unless explicitly
-        # allowed via +allow_public_clients+.
+        # allowed via +allow_public_clients+. Note that §4.4 also says a request
+        # with neither client authentication nor a sender-constrained ID-JAG
+        # MUST be rejected; this gem does not support sender-constrained
+        # ID-JAGs, so enabling +allow_public_clients+ is not draft-compliant.
         def validate_confidential_client
           return true if id_jag_config.allow_public_clients
           return true unless client&.application.respond_to?(:confidential?)

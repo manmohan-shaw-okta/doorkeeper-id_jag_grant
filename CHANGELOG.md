@@ -2,9 +2,6 @@
 
 ## main
 
-- Fix the `jwt_bearer` grant issuing a refresh token when the host app enables
-  Doorkeeper's `use_refresh_token`. The Resource AS now never issues a refresh
-  token for an ID-JAG exchange, regardless of global config (draft §4.4.4).
 - Initial release. Adds support for the Identity Assertion JWT Authorization
   Grant (ID-JAG), `draft-ietf-oauth-identity-assertion-authz-grant`, as a
   Doorkeeper extension. Requires Doorkeeper `>= 6.0.0.beta1` (for its RFC 8414
@@ -19,7 +16,8 @@
     **built-in JWT verifier** (depends on the `jwt` gem) that checks the
     signature against the trusted issuer's key(s) and enforces the draft §4.4.1
     processing rules (typ, aud, exp/nbf/iat with clock skew, required claims,
-    `client_id` continuity, replay). Never issues a refresh token (draft §4.4.4).
+    `client_id` continuity, replay). Never issues a refresh token, even when
+    Doorkeeper's `use_refresh_token` is enabled (draft §4.4.4 SHOULD NOT).
   - Resource AS configuration (set via `Doorkeeper::IdJagGrant.configure`):
     required `trusted_issuer`, `issuer_key`, `resource_owner_from_assertion`
     (all fail closed); `audience`; optional `authorize` policy hook,

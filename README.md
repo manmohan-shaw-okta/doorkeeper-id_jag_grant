@@ -120,7 +120,7 @@ Doorkeeper::IdJagGrant.configure do
   # Optional verifier tuning (defaults shown):
   # clock_skew 60
   # allowed_algorithms %w[RS256 ES256 PS256]  # `none`/HMAC are never accepted
-  # allow_public_clients false                # ID-JAG §9.1; relax not recommended
+  # allow_public_clients false                # draft §4.4/§9.1; true is not draft-compliant
 end
 ```
 
@@ -214,7 +214,7 @@ All options are set inside the `Doorkeeper::IdJagGrant.configure` block.
 | `replay_store`                  | Resource AS | Optional store `#consume(jti, issuer, expires_at) -> Boolean`. `nil` disables replay protection (recommended to set). |
 | `clock_skew`                    | Resource AS | Seconds of tolerance for `exp`/`nbf`/`iat`. Default `60`. |
 | `allowed_algorithms`            | Resource AS | JWS algorithm allow-list. Default `%w[RS256 ES256 PS256]`; `none`/HMAC never accepted. |
-| `allow_public_clients`          | Resource AS | Relax the ID-JAG §9.1 confidential-client restriction. Default `false`. |
+| `allow_public_clients`          | Resource AS | Relax the confidential-client restriction (draft §4.4, §9.1). Default `false`. Not draft-compliant when enabled: see Security notes. |
 | `assertion_decoder`             | Resource AS | Optional override of the built-in verifier: `(assertion, context) -> Hash`. |
 | `resolve_resource_owner`        | Resource AS | Subject resolution for the `assertion_decoder` path: `(claims, client) -> resource_owner`. Defaults to `sub`. |
 | `assertion_encoder`             | IdP         | `(claims, context) -> String` that signs and returns the compact ID-JAG JWT. |
@@ -297,9 +297,13 @@ This gem augments Doorkeeper's RFC 8414 metadata endpoint response (draft §7):
 
 ## Security notes
 
-* ID-JAG is restricted to **confidential clients** by default (draft §9.1). The
-  `jwt_bearer` grant rejects public clients unless `allow_public_clients` is
-  enabled (not recommended for production). Public clients should use the
+* ID-JAG is restricted to **confidential clients** by default (draft §4.4,
+  §9.1). The `jwt_bearer` grant rejects public clients unless
+  `allow_public_clients` is enabled. Draft §4.4 says a request with neither
+  client authentication nor a sender-constrained (e.g. DPoP-bound) ID-JAG MUST
+  be rejected; this gem does not support sender-constrained ID-JAGs, so
+  enabling `allow_public_clients` is **not draft-compliant** and lets anyone
+  holding a copy of an ID-JAG redeem it. Public clients should use the
   interactive authorization code flow instead.
 * The required `trusted_issuer`, `issuer_key` and `resource_owner_from_assertion`
   hooks **fail closed**: until you configure them, every `jwt_bearer` request is
@@ -311,9 +315,17 @@ This gem augments Doorkeeper's RFC 8414 metadata endpoint response (draft §7):
   logged).
 * Set `audience` (or `issuer`) so the `aud` claim is enforced; without it the
   Resource AS cannot assert its own identity and every request is rejected.
-* No refresh token is ever issued for the `jwt_bearer` grant (draft §4.4.4);
-  clients re-present the ID-JAG (or obtain a new one) when the access token
-  expires.
+* No refresh token is ever issued for the `jwt_bearer` grant. Draft §4.4.4
+  says the Resource AS SHOULD NOT issue one; this gem enforces that as policy,
+  so Doorkeeper's `use_refresh_token` setting (boolean or per-grant lambda) is
+  ignored for this grant. Clients re-present the ID-JAG (or obtain a new one)
+  when the access token expires.
+* With Doorkeeper's `reuse_access_token` enabled, redeeming a new ID-JAG can
+  return an existing unexpired access token for the same client, resource
+  owner and scopes, issued from an earlier ID-JAG. Its lifetime is then not
+  tied to the ID-JAG just presented. Draft §9.2 recommends preferring a fresh
+  ID-JAG over cached tokens; consider leaving `reuse_access_token` off or using
+  short access token lifetimes for this grant.
 
 ## Development
 

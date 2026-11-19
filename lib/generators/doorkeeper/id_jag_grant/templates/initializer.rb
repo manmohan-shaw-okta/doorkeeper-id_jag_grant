@@ -99,7 +99,9 @@ Doorkeeper::IdJagGrant.configure do |config|
 
   # ID-JAG §4.4 / §9.1: the Resource AS SHOULD require client authentication,
   # so only confidential clients are accepted by default.
-  # Set true to allow public clients (not recommended for production).
+  # Setting true is NOT draft-compliant: §4.4 says a request with neither
+  # client authentication nor a sender-constrained ID-JAG MUST be rejected, and
+  # this gem does not support sender-constrained ID-JAGs.
   # config.allow_public_clients false
 
   # Optional policy hook: `(client, resource_owner, scopes, claims) -> Boolean`.
