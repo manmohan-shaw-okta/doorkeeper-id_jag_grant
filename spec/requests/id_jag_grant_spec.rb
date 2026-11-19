@@ -480,6 +480,26 @@ RSpec.describe "Identity Assertion JWT Authorization Grant (ID-JAG)", type: :req
       expect(json_response).not_to have_key("refresh_token")
     end
 
+    context "when the host app enables refresh tokens" do
+      before do
+        Doorkeeper.configure do
+          orm :active_record
+          grant_flows %w[jwt_bearer]
+          default_scopes :read
+          optional_scopes :write
+          use_refresh_token
+        end
+      end
+
+      it "still never issues a refresh token (ID-JAG §4.4.3)" do
+        post "/oauth/token", params: bearer_params(id_jag), headers: authorization(client)
+
+        expect(response).to have_http_status(:ok)
+        expect(json_response).not_to have_key("refresh_token")
+        expect(Doorkeeper::AccessToken.last.refresh_token).to be_nil
+      end
+    end
+
     it "rejects an ID-JAG whose aud does not match this server's audience" do
       post "/oauth/token",
            params: bearer_params(id_jag("aud" => "https://someone-else.example/")),

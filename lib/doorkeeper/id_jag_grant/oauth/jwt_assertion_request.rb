@@ -47,8 +47,26 @@ module Doorkeeper
         private
 
         def before_successful_response
-          find_or_create_access_token(client, resource_owner, scopes, {}, server)
+          create_access_token
           super
+        end
+
+        # Per draft §4.4.3 the Resource AS MUST NOT issue a refresh_token when
+        # an ID-JAG is exchanged for an access token, so this bypasses
+        # +find_or_create_access_token+ (whose +use_refresh_token+ follows the
+        # host app's global refresh-token config) and forces it off.
+        def create_access_token
+          context = Doorkeeper::OAuth::Authorization::Token.build_context(
+            client, grant_type, scopes, resource_owner,
+          )
+
+          @access_token = Doorkeeper.config.access_token_model.find_or_create_for(
+            application: client&.application,
+            resource_owner: resource_owner,
+            scopes: scopes,
+            expires_in: Doorkeeper::OAuth::Authorization::Token.access_token_expires_in(server, context),
+            use_refresh_token: false,
+          )
         end
 
         def id_jag_config

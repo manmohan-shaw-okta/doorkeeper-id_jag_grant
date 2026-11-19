@@ -2,6 +2,9 @@
 
 ## main
 
+- Fix the `jwt_bearer` grant issuing a refresh token when the host app enables
+  Doorkeeper's `use_refresh_token`. The Resource AS now never issues a refresh
+  token for an ID-JAG exchange, regardless of global config (draft §4.4.3).
 - Initial release. Adds support for the Identity Assertion JWT Authorization
   Grant (ID-JAG), `draft-ietf-oauth-identity-assertion-authz-grant`, as a
   Doorkeeper extension. Requires Doorkeeper `>= 6.0.0.beta1` (for its RFC 8414
