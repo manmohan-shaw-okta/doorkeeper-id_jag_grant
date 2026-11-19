@@ -473,7 +473,7 @@ RSpec.describe "Identity Assertion JWT Authorization Grant (ID-JAG)", type: :req
       expect(token.scopes_string).to eq("read")
     end
 
-    it "never issues a refresh token (ID-JAG §4.4.3)" do
+    it "never issues a refresh token (ID-JAG §4.4.4)" do
       post "/oauth/token", params: bearer_params(id_jag), headers: authorization(client)
 
       expect(response).to have_http_status(:ok)
@@ -491,7 +491,7 @@ RSpec.describe "Identity Assertion JWT Authorization Grant (ID-JAG)", type: :req
         end
       end
 
-      it "still never issues a refresh token (ID-JAG §4.4.3)" do
+      it "still never issues a refresh token (ID-JAG §4.4.4)" do
         post "/oauth/token", params: bearer_params(id_jag), headers: authorization(client)
 
         expect(response).to have_http_status(:ok)
@@ -619,7 +619,7 @@ RSpec.describe "Identity Assertion JWT Authorization Grant (ID-JAG)", type: :req
       expect(json_response["error"]).to eq("invalid_grant")
     end
 
-    context "with the confidential-client restriction (ID-JAG §8.1)" do
+    context "with the confidential-client restriction (ID-JAG §9.1)" do
       let(:public_client) { FactoryBot.create(:application, confidential: false, scopes: "read write") }
 
       it "rejects a public client by default" do

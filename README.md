@@ -120,7 +120,7 @@ Doorkeeper::IdJagGrant.configure do
   # Optional verifier tuning (defaults shown):
   # clock_skew 60
   # allowed_algorithms %w[RS256 ES256 PS256]  # `none`/HMAC are never accepted
-  # allow_public_clients false                # ID-JAG §8.1; relax not recommended
+  # allow_public_clients false                # ID-JAG §9.1; relax not recommended
 end
 ```
 
@@ -214,7 +214,7 @@ All options are set inside the `Doorkeeper::IdJagGrant.configure` block.
 | `replay_store`                  | Resource AS | Optional store `#consume(jti, issuer, expires_at) -> Boolean`. `nil` disables replay protection (recommended to set). |
 | `clock_skew`                    | Resource AS | Seconds of tolerance for `exp`/`nbf`/`iat`. Default `60`. |
 | `allowed_algorithms`            | Resource AS | JWS algorithm allow-list. Default `%w[RS256 ES256 PS256]`; `none`/HMAC never accepted. |
-| `allow_public_clients`          | Resource AS | Relax the ID-JAG §8.1 confidential-client restriction. Default `false`. |
+| `allow_public_clients`          | Resource AS | Relax the ID-JAG §9.1 confidential-client restriction. Default `false`. |
 | `assertion_decoder`             | Resource AS | Optional override of the built-in verifier: `(assertion, context) -> Hash`. |
 | `resolve_resource_owner`        | Resource AS | Subject resolution for the `assertion_decoder` path: `(claims, client) -> resource_owner`. Defaults to `sub`. |
 | `assertion_encoder`             | IdP         | `(claims, context) -> String` that signs and returns the compact ID-JAG JWT. |
@@ -297,7 +297,7 @@ This gem augments Doorkeeper's RFC 8414 metadata endpoint response (draft §7):
 
 ## Security notes
 
-* ID-JAG is restricted to **confidential clients** by default (draft §8.1). The
+* ID-JAG is restricted to **confidential clients** by default (draft §9.1). The
   `jwt_bearer` grant rejects public clients unless `allow_public_clients` is
   enabled (not recommended for production). Public clients should use the
   interactive authorization code flow instead.
@@ -311,7 +311,7 @@ This gem augments Doorkeeper's RFC 8414 metadata endpoint response (draft §7):
   logged).
 * Set `audience` (or `issuer`) so the `aud` claim is enforced; without it the
   Resource AS cannot assert its own identity and every request is rejected.
-* No refresh token is ever issued for the `jwt_bearer` grant (draft §4.4.3);
+* No refresh token is ever issued for the `jwt_bearer` grant (draft §4.4.4);
   clients re-present the ID-JAG (or obtain a new one) when the access token
   expires.
 

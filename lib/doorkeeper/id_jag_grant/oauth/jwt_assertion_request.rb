@@ -51,7 +51,7 @@ module Doorkeeper
           super
         end
 
-        # Per draft §4.4.3 the Resource AS MUST NOT issue a refresh_token when
+        # Per draft §4.4.4 the Resource AS SHOULD NOT issue a refresh_token when
         # an ID-JAG is exchanged for an access token, so this bypasses
         # +find_or_create_access_token+ (whose +use_refresh_token+ follows the
         # host app's global refresh-token config) and forces it off.
@@ -213,8 +213,9 @@ module Doorkeeper
           Doorkeeper.config.allow_grant_flow_for_client?(grant_type, client&.application)
         end
 
-        # ID-JAG §8.1: the grant is restricted to confidential clients unless
-        # explicitly relaxed via +allow_public_clients+.
+        # ID-JAG §4.4 / §9.1: the Resource AS SHOULD require client
+        # authentication, so public clients are rejected unless explicitly
+        # allowed via +allow_public_clients+.
         def validate_confidential_client
           return true if id_jag_config.allow_public_clients
           return true unless client&.application.respond_to?(:confidential?)

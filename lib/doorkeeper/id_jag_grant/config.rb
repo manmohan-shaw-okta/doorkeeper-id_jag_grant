@@ -105,8 +105,9 @@ module Doorkeeper
       option :allowed_algorithms, default: DEFAULT_ALLOWED_ALGORITHMS
 
       # @!attribute [r] allow_public_clients
-      #   Resource AS role: ID-JAG §8.1 restricts this grant to confidential
-      #   clients. Set true to relax (not recommended for production).
+      #   Resource AS role: ID-JAG §4.4 / §9.1: the Resource AS SHOULD
+      #   require client authentication, so only confidential clients are
+      #   accepted by default. Set true to relax (not recommended for production).
       #   @return [Boolean]
       option :allow_public_clients, default: false
 

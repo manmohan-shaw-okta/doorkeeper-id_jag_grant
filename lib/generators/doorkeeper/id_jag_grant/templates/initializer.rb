@@ -97,7 +97,8 @@ Doorkeeper::IdJagGrant.configure do |config|
   # HMAC are never accepted. Default: ["RS256", "ES256", "PS256"].
   # config.allowed_algorithms ["RS256", "ES256", "PS256"]
 
-  # ID-JAG §8.1 restricts this grant to confidential clients.
+  # ID-JAG §4.4 / §9.1: the Resource AS SHOULD require client authentication,
+  # so only confidential clients are accepted by default.
   # Set true to allow public clients (not recommended for production).
   # config.allow_public_clients false
 
