@@ -45,6 +45,15 @@ RSpec.configure do |config|
     Doorkeeper::IdJagGrant.configure {}
   end
 
+  # Many examples reconfigure Doorkeeper itself (e.g. to enable
+  # use_refresh_token or reuse_access_token). Restore the dummy app's baseline
+  # before each example so that configuration never leaks across examples
+  # under random ordering.
+  doorkeeper_baseline = File.expand_path("dummy/config/initializers/doorkeeper.rb", __dir__)
+  config.before do
+    load doorkeeper_baseline
+  end
+
   config.order = :random
   Kernel.srand config.seed
 end

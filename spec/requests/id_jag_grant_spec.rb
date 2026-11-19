@@ -473,11 +473,101 @@ RSpec.describe "Identity Assertion JWT Authorization Grant (ID-JAG)", type: :req
       expect(token.scopes_string).to eq("read")
     end
 
-    it "never issues a refresh token (ID-JAG §4.4.3)" do
+    it "never issues a refresh token (ID-JAG §4.4.4)" do
       post "/oauth/token", params: bearer_params(id_jag), headers: authorization(client)
 
       expect(response).to have_http_status(:ok)
       expect(json_response).not_to have_key("refresh_token")
+    end
+
+    # Reconfigures Doorkeeper for the jwt_bearer flow plus any extra options.
+    def configure_doorkeeper(&extra)
+      Doorkeeper.configure do
+        orm :active_record
+        grant_flows %w[jwt_bearer]
+        default_scopes :read
+        optional_scopes :write
+        instance_eval(&extra) if extra
+      end
+    end
+
+    context "when the host app enables refresh tokens globally" do
+      before { configure_doorkeeper { use_refresh_token } }
+
+      it "still never issues a refresh token (ID-JAG §4.4.4)" do
+        post "/oauth/token", params: bearer_params(id_jag), headers: authorization(client)
+
+        expect(response).to have_http_status(:ok)
+        expect(json_response).not_to have_key("refresh_token")
+        expect(Doorkeeper::AccessToken.last.refresh_token).to be_nil
+      end
+    end
+
+    context "when the host app enables refresh tokens for this grant via a lambda" do
+      before do
+        configure_doorkeeper do
+          use_refresh_token { |context| context.grant_type == Doorkeeper::IdJagGrant::GRANT_TYPE_JWT_BEARER }
+        end
+      end
+
+      it "still never issues a refresh token (ID-JAG §4.4.4)" do
+        post "/oauth/token", params: bearer_params(id_jag), headers: authorization(client)
+
+        expect(response).to have_http_status(:ok)
+        expect(json_response).not_to have_key("refresh_token")
+        expect(Doorkeeper::AccessToken.last.refresh_token).to be_nil
+      end
+    end
+
+    context "when the host app enables reuse_access_token and refresh tokens" do
+      # Reuse matching looks tokens up by resource owner id, so this context
+      # resolves the subject to a persisted User rather than the raw `sub`.
+      let(:user) { User.create!(name: "user-42") }
+
+      before do
+        configure_doorkeeper do
+          use_refresh_token
+          reuse_access_token
+        end
+        owner = user
+        test = self
+        issuer_url = idp_issuer
+        Doorkeeper::IdJagGrant.configure do
+          audience issuer_url
+          trusted_issuer(->(iss) { iss == issuer_url })
+          issuer_key(->(_iss, _kid) { test.rsa_key.public_key })
+          resource_owner_from_assertion(->(_iss, _sub, _client) { owner })
+        end
+      end
+
+      it "reuses a prior jwt_bearer token for the same owner and scopes" do
+        post "/oauth/token", params: bearer_params(id_jag), headers: authorization(client)
+        first = json_response["access_token"]
+
+        expect do
+          post "/oauth/token", params: bearer_params(id_jag), headers: authorization(client)
+        end.not_to change(Doorkeeper::AccessToken, :count)
+
+        expect(json_response["access_token"]).to eq(first)
+        expect(json_response).not_to have_key("refresh_token")
+      end
+
+      it "does not reuse an existing token that carries a refresh token" do
+        existing = Doorkeeper::AccessToken.create!(
+          application: client,
+          resource_owner_id: user.id,
+          scopes: "read",
+          expires_in: 7200,
+          use_refresh_token: true,
+        )
+
+        expect do
+          post "/oauth/token", params: bearer_params(id_jag), headers: authorization(client)
+        end.to change(Doorkeeper::AccessToken, :count).by(1)
+
+        expect(json_response["access_token"]).not_to eq(existing.token)
+        expect(json_response).not_to have_key("refresh_token")
+      end
     end
 
     it "rejects an ID-JAG whose aud does not match this server's audience" do
@@ -599,7 +689,7 @@ RSpec.describe "Identity Assertion JWT Authorization Grant (ID-JAG)", type: :req
       expect(json_response["error"]).to eq("invalid_grant")
     end
 
-    context "with the confidential-client restriction (ID-JAG §8.1)" do
+    context "with the confidential-client restriction (ID-JAG §9.1)" do
       let(:public_client) { FactoryBot.create(:application, confidential: false, scopes: "read write") }
 
       it "rejects a public client by default" do

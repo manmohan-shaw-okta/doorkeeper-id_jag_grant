@@ -97,8 +97,11 @@ Doorkeeper::IdJagGrant.configure do |config|
   # HMAC are never accepted. Default: ["RS256", "ES256", "PS256"].
   # config.allowed_algorithms ["RS256", "ES256", "PS256"]
 
-  # ID-JAG §8.1 restricts this grant to confidential clients.
-  # Set true to allow public clients (not recommended for production).
+  # ID-JAG §4.4 / §9.1: the Resource AS SHOULD require client authentication,
+  # so only confidential clients are accepted by default.
+  # Setting true is NOT draft-compliant: §4.4 says a request with neither
+  # client authentication nor a sender-constrained ID-JAG MUST be rejected, and
+  # this gem does not support sender-constrained ID-JAGs.
   # config.allow_public_clients false
 
   # Optional policy hook: `(client, resource_owner, scopes, claims) -> Boolean`.

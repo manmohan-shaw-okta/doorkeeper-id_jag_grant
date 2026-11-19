@@ -16,12 +16,13 @@
     **built-in JWT verifier** (depends on the `jwt` gem) that checks the
     signature against the trusted issuer's key(s) and enforces the draft §4.4.1
     processing rules (typ, aud, exp/nbf/iat with clock skew, required claims,
-    `client_id` continuity, replay). Never issues a refresh token (draft §4.4.3).
+    `client_id` continuity, replay). Never issues a refresh token, even when
+    Doorkeeper's `use_refresh_token` is enabled (draft §4.4.4 SHOULD NOT).
   - Resource AS configuration (set via `Doorkeeper::IdJagGrant.configure`):
     required `trusted_issuer`, `issuer_key`, `resource_owner_from_assertion`
     (all fail closed); `audience`; optional `authorize` policy hook,
     `replay_store`, `clock_skew`, `allowed_algorithms`, `allow_public_clients`
-    (confidential-client-only by default per §8.1). An optional
+    (confidential-client-only by default per §9.1). An optional
     `assertion_decoder` hook replaces the built-in verifier with bring-your-own
     crypto.
   - IdP configuration: `issuer`, `assertion_encoder`, `expires_in`.
